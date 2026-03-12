@@ -986,85 +986,197 @@ if (!state.playerData) {
 loadPlacar();
 
 
-// --- Inanna Cat Interactive Animation ---
-const inannaCat = document.getElementById('inannaCat');
-if (inannaCat) {
+// ═══════════════════════════════════════════════════════════════════════
+// 🐱 INANNA CAT — Interactive Footer Companion
+// ═══════════════════════════════════════════════════════════════════════
+(function() {
+  const cat      = document.getElementById('inannaCat');
+  const bubble   = document.getElementById('catSpeechBubble');
+  const counter  = document.getElementById('petCounter');
+  const petSpan  = document.getElementById('petCount');
+  if (!cat) return;
+
+  // Sprites
+  const SPRITES = {
+    hello : 'cat_siamese_walk.png',
+    happy : 'cat_siamese_happy.png',
+    magic : 'cat_siamese_happy.png',
+  };
+
+  // Phrases the cat says in different moods
+  const PHRASES = {
+    idle   : ['Miau... 🐾', 'Ronron...✨', '*boceja*', 'Zzzz... 💤', '*se coça*', 'Mmmrr... 🌙'],
+    near   : ['Oi! 👋', 'Me peta! 🐾', 'Purrrr~ 💛', 'Miau! 😸', 'Vem cá! 🐱', 'Que bonito! ✨'],
+    petted : ['Purrr!! 💛💛', 'Adoro isso! 😻', 'Mais! Mais! 🐾', 'Que delícia~✨', '*ronrona forte*', 'Feliz! 🌟'],
+    magic  : ['Eu sei prever! 🔮', 'AABB ou ABAB? 📜', 'Cordel é arte! 🌵', 'Proto-IA ativa! 🤖', 'Rima! Rima! 🎶'],
+    walk   : ['Passeando... 🚶', 'Explorando! 🗺️', 'Que lugar bonito!', 'Vai e vem~ 🐾'],
+  };
+
+  // State
+  let catX        = -70;
+  let mouseX      = window.innerWidth / 2;
+  let mouseY      = 0;
   let isInteractive = false;
-  let mouseX = window.innerWidth / 2;
-  let catX = -60; // Start offscreen matching the keyframes
-  
+  let petCount    = 0;
+  let bubbleTimer = null;
+  let idleTimer   = null;
+  let frameId     = null;
+  let currentSprite = 'hello';
+  let spriteFrame = 0;
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function setSprite(name) {
+    if (currentSprite === name) return;
+    currentSprite = name;
+    cat.src = SPRITES[name] || SPRITES.hello;
+  }
+
+  function showBubble(text, duration = 2200) {
+    if (!bubble) return;
+    clearTimeout(bubbleTimer);
+    // Position above the cat
+    const catRect = cat.getBoundingClientRect();
+    bubble.style.left = (catX + 5) + 'px';
+    bubble.textContent = text;
+    bubble.style.display = 'block';
+    // Reset animation
+    bubble.style.animation = 'none';
+    void bubble.offsetWidth;
+    bubble.style.animation = 'bubblePop 0.25s cubic-bezier(0.2, 0.8, 0.2, 1.4) forwards';
+    bubbleTimer = setTimeout(() => {
+      bubble.style.display = 'none';
+    }, duration);
+  }
+
+  function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function facingRight() { return cat.style.transform === 'scaleX(-1)'; }
+
+  // ── Idle random behaviors ─────────────────────────────────────────────
+  function scheduleIdle() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (!isInteractive) {
+        // Randomly say something or do a little jump
+        const roll = Math.random();
+        if (roll < 0.5) {
+          showBubble(pickRandom(PHRASES.idle), 2000);
+        } else if (roll < 0.7) {
+          setSprite('magic');
+          showBubble(pickRandom(PHRASES.magic), 2500);
+          setTimeout(() => setSprite('hello'), 2000);
+        } else {
+          // Mini-boop: jump up a tiny bit
+          cat.style.transition = 'bottom 0.15s ease-out';
+          cat.style.bottom = '22px';
+          setTimeout(() => { cat.style.bottom = '5px'; }, 220);
+          setTimeout(() => { cat.style.transition = ''; }, 400);
+        }
+      }
+      scheduleIdle();
+    }, 4000 + Math.random() * 6000); // every 4–10 s
+  }
+
+  // ── Mouse tracking ────────────────────────────────────────────────────
   window.addEventListener('mousemove', (e) => {
     mouseX = e.clientX;
-    // Enter interactive mode if mouse is in bottom third of screen
-    if (e.clientY > window.innerHeight * 0.6) {
-      if (!isInteractive) {
-        isInteractive = true;
-        // Grab current computed X roughly if possible, else start where she is
-        const rect = inannaCat.getBoundingClientRect();
-        catX = rect.left;
-        inannaCat.style.animation = 'none'; // Stop CSS animation
-        inannaCat.style.left = catX + 'px';
-        inannaCat.src = 'cat_hello_1772756851224.png';
-        
-        // Start JS tracking loop
-        requestAnimationFrame(updateCatPosition);
-      }
-    } else {
-      // Mouse moved away, return to patrol
-      if (isInteractive) {
-        isInteractive = false;
-        inannaCat.style.animation = 'walkInanna 14s linear infinite alternate';
-        inannaCat.style.left = '';
-        inannaCat.style.transform = '';
-      }
+    mouseY = e.clientY;
+
+    const inBottomZone = e.clientY > window.innerHeight - 180;
+
+    if (inBottomZone && !isInteractive) {
+      // Switch to interactive mode
+      isInteractive = true;
+      cat.style.animation = 'none';
+      const rect = cat.getBoundingClientRect();
+      catX = rect.left;
+      cat.style.left = catX + 'px';
+      setSprite('hello');
+      showBubble(pickRandom(PHRASES.near), 1800);
+      if (!frameId) frameId = requestAnimationFrame(updateLoop);
+    } else if (!inBottomZone && isInteractive) {
+      // Return to patrol
+      isInteractive = false;
+      cancelAnimationFrame(frameId);
+      frameId = null;
+      cat.style.animation = 'walkInanna 14s linear infinite alternate';
+      cat.style.left = '';
+      cat.style.transform = '';
+      setSprite('hello');
     }
   });
 
-  function updateCatPosition() {
+  // ── JS animation loop (interactive mode) ─────────────────────────────
+  function updateLoop() {
     if (!isInteractive) return;
 
-    // Calculate distance to mouse
-    const distance = mouseX - (catX + 22.5); // 22.5 is approx half width
-    
-    // Face the mouse
-    if (distance > 0) {
-      inannaCat.style.transform = 'scaleX(-1)'; // Face Right
-    } else {
-      inannaCat.style.transform = 'scaleX(1)'; // Face Left
-    }
-    
-    // Move towards mouse if far enough away
-    if (Math.abs(distance) > 40) {
-      catX += distance * 0.04; // Smooth follow speed
-      inannaCat.style.left = catX + 'px';
-      
-      // Simulate walking animation by swapping sprites
-      if (Math.random() < 0.1) {
-        inannaCat.src = inannaCat.src.includes('hello') ? 'cat_happy_1772756975631.png' : 'cat_hello_1772756851224.png';
+    const catCenter = catX + 29; // half cat width
+    const dist = mouseX - catCenter;
+
+    // Face mouse
+    cat.style.transform = dist > 0 ? 'scaleX(-1)' : 'scaleX(1)';
+
+    if (Math.abs(dist) > 45) {
+      // Walk toward mouse
+      catX += dist * 0.05;
+      catX = Math.max(-20, Math.min(window.innerWidth - 60, catX));
+      cat.style.left = catX + 'px';
+      // Alternate sprites for walking
+      spriteFrame++;
+      if (spriteFrame % 8 === 0) {
+        setSprite(currentSprite === 'hello' ? 'happy' : 'hello');
+      }
+      // Bubble drift
+      if (bubble.style.display === 'block') {
+        bubble.style.left = (catX + 5) + 'px';
       }
     } else {
-      // Close to mouse! Purr/magic state
-      if (Math.random() < 0.05) {
-        inannaCat.src = 'cat_magic_1772756905944.png';
-      }
+      // Near mouse: look happy / curious
+      setSprite('happy');
     }
-    
-    requestAnimationFrame(updateCatPosition);
+
+    frameId = requestAnimationFrame(updateLoop);
   }
-  
-  // Click interaction (purr/jump)
-  inannaCat.style.cursor = 'pointer';
-  inannaCat.addEventListener('click', () => {
-    inannaCat.src = 'cat_magic_1772756905944.png';
-    inannaCat.style.transition = 'transform 0.2s';
-    const oldTransform = inannaCat.style.transform;
-    inannaCat.style.transform = oldTransform + ' translateY(-20px) scale(1.1)';
-    
+
+  // ── Click / Pet interaction ───────────────────────────────────────────
+  cat.style.cursor = 'pointer';
+
+  cat.addEventListener('click', () => {
+    petCount++;
+    if (petSpan) petSpan.textContent = petCount;
+    if (counter) {
+      counter.style.left = (catX + 5) + 'px';
+      counter.style.display = 'inline-block';
+      counter.style.animation = 'none';
+      void counter.offsetWidth;
+      counter.style.animation = 'badgePop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1.4) forwards';
+    }
+
+    setSprite('magic');
+    showBubble(pickRandom(PHRASES.petted), 2000);
+
+    // Jump
+    cat.style.transition = 'bottom 0.15s ease-out, filter 0.2s';
+    cat.style.bottom = '30px';
+    cat.style.filter = 'drop-shadow(0 4px 20px rgba(249,115,22,0.9)) brightness(1.2)';
     setTimeout(() => {
-      inannaCat.style.transform = oldTransform;
+      cat.style.bottom = '5px';
+      cat.style.filter = 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))';
       setTimeout(() => {
-        inannaCat.style.transition = '';
-      }, 200);
-    }, 300);
+        cat.style.transition = '';
+        setSprite('happy');
+      }, 300);
+    }, 220);
   });
-}
+
+  // ── Start ─────────────────────────────────────────────────────────────
+  scheduleIdle();
+
+  // Greet after a short delay on load
+  setTimeout(() => {
+    showBubble('Olá! Sou a Inanna! 🐱', 2500);
+  }, 2500);
+
+})();
