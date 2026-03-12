@@ -96,14 +96,9 @@
       <div class="header-right">
         <div class="toggles glass-pill">
           <label class="mode-toggle">
-            <input id="modeClass" type="checkbox" checked />
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-            <span class="toggle-label">Modo Didático</span>
-          </label>
-          <label class="mode-toggle">
             <input id="modeChallenge" type="checkbox" />
             <span class="toggle-track"><span class="toggle-thumb"></span></span>
-            <span class="toggle-label">Modo Desafio</span>
+            <span class="toggle-label">Modo Desafio <span id="challengeStatus" style="color:var(--primary); font-family:var(--font-mono); font-size:11px;">[ OFF ]</span></span>
           </label>
         </div>
         <div class="metrics-mini">
@@ -189,6 +184,10 @@
           <!-- Progresso da quadra -->
           <div id="history" class="history-inline"></div>
 
+          <div id="schemeHint" class="scheme-hint" style="background: rgba(249,115,22,0.1); color: var(--primary); padding: 8px 12px; border-radius: 8px; font-weight: bold; margin-bottom: 15px; border: 1px solid rgba(249,115,22,0.3); font-size: 13px;">
+             💡 Esquema sugerido: <span id="suggestedScheme">Livre</span>
+          </div>
+
           <div class="verse-input-area">
             <label class="field-label" for="verseInput">Verso com lacuna <code>___</code></label>
             <div class="input-row">
@@ -269,7 +268,7 @@
       <!-- Lado Direito: Placar -->
       <aside class="ranking-area">
         <div class="step-header">
-          <h2>🏆 Top 3 Destaques</h2>
+          <h2>🏆 Top 10 Destaques</h2>
           <p class="step-desc" style="font-size: 13px;">Os melhores versos até agora!</p>
           <button id="btnRefreshPlacar" class="btn btn-ghost"
             style="margin-top: 5px; font-size: 12px; padding: 4px 8px;">🔄 Atualizar</button>
@@ -290,12 +289,16 @@
           <img src="CORDEL%202.0%20SEM%20FUNDO.png" alt="Projeto Cordel 2.0" class="cordel-logo" />
         </a>
       </div>
-      <div class="cat-footer-container">
-        <img src="cat_hello_1772756851224.png" alt="Inanna, a gatinha proto-IA" class="inanna-cat-footer" />
-      </div>
+
     </footer>
   </main>
 
+  <footer class="inanna-footer">
+    <img src="cat_hello_1772756851224.png" id="inannaCat" alt="Gata Inanna caminhando">
+  </footer>
+
+  <script src="cordel_rhyme_bank.js"></script>
+  <script src="prediction_engine_v2.js"></script>
   <script src="app.js"></script>
 </body>
 
