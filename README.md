@@ -37,8 +37,30 @@ O fluxo do aplicativo simula o uso de modelos de linguagem:
 4. **Construção e Placar:** Ao finalizar uma quadra (4 versos), o jogador envia sua obra. 
 
 ### Modos de Jogo:
-- **Modo Didático:** O foco é explorar e aprender tranquilamente como a rede monta os textos contextuais.
-- **Modo Desafio:** O jogador interage com o Placar em Destaque. Ganha 1 ponto sempre que conseguir construir uma frase em que a IA preveja opções com Confiança Baixa (< 42%), recompensando a fuga do óbvio. Os melhores textos submetidos formam um ranking online!
+- **Modo Desafio:** O desafio pode ser alternado entre `[ ON ]` e `[ OFF ]`. 
+  - Quando **ON**, a pontuação é ativa, rimas complexas são valorizadas, e a quadra completa pode ser enviada ao Placar Top 10 online para os melhores cordéis.
+  - Quando **OFF**, o jogo corre de forma livre para experimentação e aprendizado pedagógico, sem envios ou ranqueamento competitivo.
+
+
+## 🧠 Motor de Rimas (V2)
+
+A Inanna agora incorpora um **Motor de Previsão V2** mais inteligente, que vai além das simulações de tokens, realizando:
+- **Previsão contextual:** A escolha de palavras considera o tema ativo, o verso anterior e a lógica da quadra.
+- **Análise fonética:** O algoritmo detecta rimas comparando sons finais (as últimas 1, 2 ou 3 letras) da última palavra do verso, priorizando terminações idênticas.
+- **Banco Lexical:** A IA consulta uma base dedicada de rimas populares para guiar o fechamento de estrofes de maneira harmônica.
+
+## 📖 Estrutura de Quadra
+
+Para garantir uma vivência literária autêntica de Cordel, a IA aprendeu a orientar o jogador sugerindo estruturas clássicas ao longo da criação:
+- **AABB (Rima em parândo):** Verso 1 rima com Verso 2; Verso 3 rima com Verso 4.
+- **ABAB (Rima alternada):** Verso 1 rima com Verso 3; Verso 2 rima com Verso 4.
+
+Essa sugestão não bloqueia a criatividade: serve como guia de onde a IA tentará focar suas previsões poéticas.
+
+## 📚 Banco de Palavras
+
+A inteligência da Inanna está amparada em um grande **Corpus de Rimas** customizado. Como projetos reais de Machine Learning utilizam datasets curados, nossa engine utiliza o `cordel_rhyme_bank.js`.
+Este banco lexical contém **800 palavras** organizadas por terminações fonéticas (`-ão`, `-ar`, `-or`, `-eiro`, `-ia`, `-ade`, `-ente`, `-im`). O vocabulário eleva o regionalismo e foca em temas da cultura popular nortestina, sertão, cotidiano, sentimentos e festa junina.
 
 ## 🚀 Tecnologias Utilizadas e Integração
 
