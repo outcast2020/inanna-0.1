@@ -67,7 +67,7 @@ const ui = {
   history: $("history"),
 
   // modo
-  modeClass: $("modeClass"),
+  challengeStatus: $("challengeStatus"),
   modeChallenge: $("modeChallenge"),
   confidence: $("confidence"),
   points: $("points"),
@@ -84,7 +84,7 @@ const state = {
     pred: null,       // resultado de buildPredictions
   },
   points: 0,
-  modeClass: true,
+  scheme: "Livre",
   modeChallenge: false,
 };
 
@@ -385,6 +385,10 @@ function selectTheme(theme) {
   state.chosenTheme = theme;
   ui.selectedThemeName.textContent = `${theme.emoji} ${theme.name}`;
 
+  state.scheme = Math.random() < 0.5 ? "AABB" : "ABAB";
+  const schemeSpan = document.getElementById("suggestedScheme");
+  if (schemeSpan) schemeSpan.textContent = state.scheme;
+
   // Define o placeholder instigante (armadilha) usando o trap example do objeto
   if (theme.trap) {
     ui.verseInput.placeholder = theme.trap;
@@ -414,7 +418,7 @@ function onAnalyze() {
   ui.verseHint.textContent = "";
 
   state.current.rawVerse = raw;
-  state.current.pred = buildPredictions(raw, state.chosenTheme);
+  state.current.pred = (typeof buildPredictionsV2 === "function") ? buildPredictionsV2(raw, state.chosenTheme, state.lines, state.scheme) : buildPredictions(raw, state.chosenTheme);
   renderStep3();
   goToPhase(3);
 }
@@ -523,14 +527,11 @@ function renderStep3() {
     }, 80 + i * 120);
   });
 
-  // Explicação didática
-  if (state.modeClass) {
-    setExplain(
-      `A Inanna detectou o contexto "${theme.name}" e calculou pesos para cada palavra. ` +
-      `Isso simula como um modelo de linguagem faz "previsão de próximo token": ` +
-      `estatística sobre padrões, não mágica!`
-    );
-  }
+  // Explicação
+  setExplain(
+    `A Inanna analisou o contexto "${theme.name}", rimas, probabilidade e gerou os candidatos. ` +
+    `Isso simula como um modelo de linguagem faz "previsão de próximo token" no processamento de texto!`
+  );
 }
 
 // ── Escolha do token ──────────────────────────────────────────────────
@@ -547,9 +548,9 @@ function chooseToken(token, index, source) {
     themeName: state.chosenTheme.name,
   });
 
-  if (state.modeClass && source === "ia") {
+  if (source === "ia") {
     setExplain(
-      `✅ Você escolheu "${token}" (${formatPct(p)}) — a IA sugeriu com base em padrões do contexto "${state.chosenTheme.name}".`
+      `✅ Você escolheu "${token}" (${formatPct(p)}) — a IA sugeriu usando o motor de predição V2.`
     );
   } else if (source === "custom") {
     setExplain(
@@ -676,6 +677,29 @@ function rhymeFeedbackHTML(r) {
     '</div>';
 }
 
+function detectRhymeScheme(lines){
+  if(lines.length < 4) return "Livre";
+
+  const endings = lines.map(l=>{
+    let w = typeof getLastWord === 'function' ? getLastWord(l.verse || l) : "";
+    return w.slice(-2);
+  });
+
+  if(endings[0]===endings[1] && endings[2]===endings[3]){
+    return "AABB";
+  }
+
+  if(endings[0]===endings[2] && endings[1]===endings[3]){
+    return "ABAB";
+  }
+
+  if(endings[0]===endings[3] && endings[1]===endings[2]){
+    return "ABBA";
+  }
+
+  return "Livre";
+}
+
 // ── Finalizar quadra ──────────────────────────────────────────────────
 function finishPoem() {
   var quadraText = state.lines.map(function (l) { return l.verse; }).join("\n");
@@ -684,6 +708,12 @@ function finishPoem() {
   // Analisa rimas
   var rhyme = analyzeRhyme(state.lines);
   state.rhyme = rhyme;
+  
+  // Detecção de rima (V2)
+  state.scheme = detectRhymeScheme(state.lines);
+  if (ui.contextDetected) {
+    ui.contextDetected.textContent = "Esquema detectado: " + state.scheme;
+  }
 
   // Aplica pontos de rima no modo desafio
   if (state.modeChallenge) {
@@ -762,29 +792,30 @@ function renderPlacarItems(data) {
 
   // Exibir o botão se houver mais de 3 itens
   if (ui.btnViewFullPlacar) {
-    ui.btnViewFullPlacar.style.display = sortedData.length > 3 ? "flex" : "none";
+    ui.btnViewFullPlacar.style.display = sortedData.length > 10 ? "flex" : "none";
   }
 
-  const top3 = sortedData.slice(0, 3);
+  const top10 = sortedData.slice(0, 10);
 
   const populateList = (list, container) => {
     container.innerHTML = "";
-    list.forEach(item => {
+    list.forEach((item, i) => {
+      const medal = i===0 ? "🥇" : i===1 ? "🥈" : i===2 ? "🥉" : "🏅";
       const div = document.createElement("div");
       div.className = "placar-item";
       div.innerHTML = `
         <div class="placar-header" style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="placar-pos">${item.posicao}</span>
+          <span class="placar-pos" style="font-size:15px; font-weight:bold;">${medal} ${i+1}º</span>
           <span class="placar-pontos" style="font-size:11px; font-weight:800; background:rgba(249,115,22,0.15); color:var(--primary); padding:2px 8px; border-radius:99px;">${item.pontos ? item.pontos + ' pts' : '0 pts'}</span>
         </div>
-        <div class="placar-autor">${escapeHtml(item.autor)}</div>
-        <div class="placar-verso">"${escapeHtml(item.verso)}"</div>
+        <div class="placar-autor" style="font-weight:600; margin-top:4px;">${escapeHtml(item.autor)}</div>
+        <div class="placar-verso" style="font-size:13px; color:var(--muted); font-style:italic; margin-top:2px;">"${escapeHtml(item.verso)}"</div>
       `;
       container.appendChild(div);
     });
   };
 
-  populateList(top3, ui.placarList);
+  populateList(top10, ui.placarList);
   if (ui.fullPlacarList) populateList(sortedData, ui.fullPlacarList);
 }
 
@@ -899,8 +930,11 @@ function onNewPoem() {
 
 // ── Modos ─────────────────────────────────────────────────────────────
 function syncModes() {
-  state.modeClass = !!ui.modeClass.checked;
   state.modeChallenge = !!ui.modeChallenge.checked;
+  if (ui.challengeStatus) {
+    ui.challengeStatus.textContent = state.modeChallenge ? "[ ON ]" : "[ OFF ]";
+    ui.challengeStatus.style.color = state.modeChallenge ? "var(--accent)" : "var(--primary)";
+  }
   if (!state.modeChallenge) {
     state.points = 0;
     ui.points.textContent = "0";
@@ -915,7 +949,6 @@ ui.customInput.addEventListener("keydown", e => { if (e.key === "Enter") onCusto
 ui.btnBack.addEventListener("click", () => goToPhase(2));
 ui.copyQuadra.addEventListener("click", onCopyQuadra);
 ui.btnNewPoem.addEventListener("click", onNewPoem);
-ui.modeClass.addEventListener("change", syncModes);
 ui.modeChallenge.addEventListener("change", syncModes);
 
 // Mostrar regras do desafio
@@ -951,3 +984,87 @@ if (!state.playerData) {
   goToPhase(1);
 }
 loadPlacar();
+
+
+// --- Inanna Cat Interactive Animation ---
+const inannaCat = document.getElementById('inannaCat');
+if (inannaCat) {
+  let isInteractive = false;
+  let mouseX = window.innerWidth / 2;
+  let catX = -60; // Start offscreen matching the keyframes
+  
+  window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    // Enter interactive mode if mouse is in bottom third of screen
+    if (e.clientY > window.innerHeight * 0.6) {
+      if (!isInteractive) {
+        isInteractive = true;
+        // Grab current computed X roughly if possible, else start where she is
+        const rect = inannaCat.getBoundingClientRect();
+        catX = rect.left;
+        inannaCat.style.animation = 'none'; // Stop CSS animation
+        inannaCat.style.left = catX + 'px';
+        inannaCat.src = 'cat_hello_1772756851224.png';
+        
+        // Start JS tracking loop
+        requestAnimationFrame(updateCatPosition);
+      }
+    } else {
+      // Mouse moved away, return to patrol
+      if (isInteractive) {
+        isInteractive = false;
+        inannaCat.style.animation = 'walkInanna 14s linear infinite alternate';
+        inannaCat.style.left = '';
+        inannaCat.style.transform = '';
+      }
+    }
+  });
+
+  function updateCatPosition() {
+    if (!isInteractive) return;
+
+    // Calculate distance to mouse
+    const distance = mouseX - (catX + 22.5); // 22.5 is approx half width
+    
+    // Face the mouse
+    if (distance > 0) {
+      inannaCat.style.transform = 'scaleX(-1)'; // Face Right
+    } else {
+      inannaCat.style.transform = 'scaleX(1)'; // Face Left
+    }
+    
+    // Move towards mouse if far enough away
+    if (Math.abs(distance) > 40) {
+      catX += distance * 0.04; // Smooth follow speed
+      inannaCat.style.left = catX + 'px';
+      
+      // Simulate walking animation by swapping sprites
+      if (Math.random() < 0.1) {
+        inannaCat.src = inannaCat.src.includes('hello') ? 'cat_happy_1772756975631.png' : 'cat_hello_1772756851224.png';
+      }
+    } else {
+      // Close to mouse! Purr/magic state
+      if (Math.random() < 0.05) {
+        inannaCat.src = 'cat_magic_1772756905944.png';
+      }
+    }
+    
+    requestAnimationFrame(updateCatPosition);
+  }
+  
+  // Click interaction (purr/jump)
+  inannaCat.style.cursor = 'pointer';
+  inannaCat.addEventListener('click', () => {
+    inannaCat.src = 'cat_magic_1772756905944.png';
+    inannaCat.style.transition = 'transform 0.2s';
+    const oldTransform = inannaCat.style.transform;
+    inannaCat.style.transform = oldTransform + ' translateY(-20px) scale(1.1)';
+    
+    setTimeout(() => {
+      inannaCat.style.transform = oldTransform;
+      setTimeout(() => {
+        inannaCat.style.transition = '';
+      }, 200);
+    }, 300);
+  });
+}
